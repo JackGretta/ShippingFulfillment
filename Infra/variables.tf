@@ -15,3 +15,9 @@ variable "env" {
     type = string
     default = "dev"
 }
+
+variable "services" {
+    description = "List of services to provision"
+    type = list(string)
+    default = ["order", "inventory", "payment", "fulfillment", "notification"]
+}
