@@ -5,7 +5,7 @@ data "archive_file" "order_service_zip" {
 }
 
 resource "aws_lambda_function" "order_service" {
-    function_name = "fulfillment-order-service"
+    function_name = "${var.project}-${var.env}-service"
     role = aws_iam_role.lambda_exec.arn
     handler = "lambda_function.handler"
     runtime = "python3.12"
