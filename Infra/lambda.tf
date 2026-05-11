@@ -8,7 +8,7 @@ data "archive_file" "service_zip" {
 resource "aws_lambda_function" "service" {
     for_each = toset(var.services)
     function_name = "${var.project}-${var.env}-${each.value}-service"
-    role = aws_iam_role.lambda_exec.arn
+    role = aws_iam_role.lambda_exec.arn #use role from iam.tf
     handler = "lambda_function.handler"
     runtime = "python3.12"
     filename = data.archive_file.service_zip[each.value].output_path

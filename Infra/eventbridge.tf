@@ -10,7 +10,7 @@ resource "aws_cloudwatch_event_bus" "main" {
   name = "${var.project}-${var.env}-event-bus"
 }
 
-# Who published the event. EventBridge looks for matching source and detail type to route
+# EventBridge rules: Who published the event. EventBridge looks for matching source and detail type to route
 resource "aws_cloudwatch_event_rule" "order_placed" {
   name = "${var.project}-${var.env}-order-placed"
   event_bus_name = aws_cloudwatch_event_bus.main.name
@@ -40,7 +40,18 @@ resource "aws_cloudwatch_event_rule" "payment_confirmed" {
     detail-type = ["PaymentConfirmed"]
   })
 }
-# End published events
+
+resource "aws_cloudwatch_event_rule" "inventory_reservation_failed" {
+  name = "${var.project}-${var.env}-inventory-reservation-failed"
+  event_bus_name = aws_cloudwatch_event_bus.main.name
+
+  event_pattern = jsonencode({
+    source = ["inventory-service"]
+    detail-type = ["InventoryReservationFailed"]
+  })
+}
+
+# End rules
 
 
 # Targets (more like destination): where does event go when matched?
@@ -58,10 +69,25 @@ resource "aws_cloudwatch_event_target" "inventory_reserved_target" {
   arn = aws_sqs_queue.service_queue["payment"].arn
 }
 
-resource "aws_cloudwatch_event_target" "payment_confirmed_target" {
+resource "aws_cloudwatch_event_target" "inventory_reservation_failed_target" {
+  rule = aws_cloudwatch_event_rule.inventory_reservation_failed.name
+  event_bus_name = aws_cloudwatch_event_bus.main.name
+  target_id = "notification-queue"
+  arn = aws_sqs_queue.service_queue["notification"].arn
+}
+
+resource "aws_cloudwatch_event_target" "payment_confirmed_fulfillment_target" {
   rule = aws_cloudwatch_event_rule.payment_confirmed.name
   event_bus_name = aws_cloudwatch_event_bus.main.name
   target_id = "fulfillment-queue"
   arn = aws_sqs_queue.service_queue["fulfillment"].arn
 }
+
+resource "aws_cloudwatch_event_target" "payment_confirmed_notification_target" {
+  rule = aws_cloudwatch_event_rule.payment_confirmed.name
+  event_bus_name = aws_cloudwatch_event_bus.main.name
+  target_id = "notification-queue"
+  arn = aws_sqs_queue.service_queue["notification"].arn
+}
+
 # End targets
