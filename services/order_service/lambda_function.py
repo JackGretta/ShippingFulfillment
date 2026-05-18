@@ -1,7 +1,7 @@
 import json
 import uuid
-import boto3
 import os
+import boto3
 from typing import List
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -21,6 +21,7 @@ class Order:
 client = boto3.client('events')
 bus_name = os.environ.get('EVENT_BUS_NAME', 'fulfillment-dev-event-bus')
 
+# Order Service
 def handler(event, context):    
     # validate payload
     try:
@@ -37,7 +38,8 @@ def handler(event, context):
             'order_id': order_id,
             'customer_id': order.customer_id,
             'items': [{'item_id': item.item_id, 'quantity': item.quantity} for item in order.items],
-            'timestamp': datetime.now(timezone.utc).isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'payment_token': 'mock_token_123456789' # Payment info collected by front end and securely exchanged for token
         }
 
         # publish event to Eventbridge

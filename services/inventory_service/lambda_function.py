@@ -10,7 +10,7 @@ logger.setLevel(logging.INFO)
 ###############################################################
 
 eventbridge = boto3.client("events")
-EVENT_BUS_NAME = os.environ["EVENT_BUS_NAME"]
+bus_name = os.environ.get('EVENT_BUS_NAME', 'fulfillment-dev-event-bus')
 
 # Simulated inventory store. Can move to database later
 INVENTORY = {
@@ -21,6 +21,7 @@ INVENTORY = {
 
 ###############################################################
 
+# Inventory Service
 def handler(event, context):
     for record in event["Records"]:
         body = json.loads(record["body"])
@@ -84,7 +85,7 @@ def publish_event(detail_type: str, detail: dict) -> None:
                 "Source": "inventory-service",
                 "DetailType": detail_type,
                 "Detail": json.dumps(detail),
-                "EventBusName": EVENT_BUS_NAME
+                "EventBusName": bus_name
             }
         ]
     )

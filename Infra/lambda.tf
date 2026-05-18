@@ -13,6 +13,12 @@ resource "aws_lambda_function" "service" {
     runtime = "python3.12"
     filename = data.archive_file.service_zip[each.value].output_path
     source_code_hash = data.archive_file.service_zip[each.value].output_base64sha256
+
+    environment {
+        variables = {
+        EVENT_BUS_NAME = aws_cloudwatch_event_bus.main.name
+      }
+    }
 }
 
 # Individual lambda resource and data for reference
