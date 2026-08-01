@@ -38,3 +38,17 @@ resource "aws_iam_role_policy" "lambda_eventbridge" {
     }]
   })
 }
+
+resource "aws_iam_role_policy" "dynamodb_access" {
+  name = "${var.project}-${var.env}-dynamodb-access-policy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["dynamodb:PutItem", "dynamodb:UpdateItem"]
+      Resource = values(aws_dynamodb_table.dynamodb_tables)[*].arn # values pulls to list and [*] iterates 
+    }]
+  })
+}

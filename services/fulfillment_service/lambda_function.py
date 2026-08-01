@@ -64,7 +64,7 @@ def handler(event, context):
         if response['FailedEntryCount'] > 0:
             return {
                 'statusCode': 500,
-                'body': json.dumps({'error': 'Failed to publish payment event'})
+                'body': json.dumps({'error': 'Failed to publish fulfillment event'})
             }
         
         return {
@@ -84,7 +84,7 @@ def handler(event, context):
         }
 
 def simulate_fulfillment(order_id: str) -> bool:
-    success = random.randint(0, 10) >= 9
+    success = random.randint(0, 10) < 9
     logger.info("Fulfillment result=%s orderId=%s", success, order_id)
     return success
 

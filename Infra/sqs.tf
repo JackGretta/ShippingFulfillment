@@ -20,6 +20,7 @@ resource "aws_sqs_queue_policy" "allow_eventbridge" {
       Principal = { Service = "events.amazonaws.com" }
       Action    = "sqs:SendMessage"
       Resource  = aws_sqs_queue.service_queue[each.value].arn
+      #Condition = ...Missing right now to simplify. EventBridge could write to any queue if someone misconfigures.
     }]
   })
 }

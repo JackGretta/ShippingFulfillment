@@ -87,7 +87,7 @@ def handler(event, context):
         }
     
 def simulate_payment(order_id: str, payment_token: str) -> bool:
-    success = random.randint(0, 10) >= 9
+    success = random.randint(0, 10) < 9
     logger.info("Payment result=%s orderId=%s", success, order_id)
     return success
 

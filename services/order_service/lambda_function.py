@@ -2,6 +2,7 @@ import json
 import uuid
 import os
 import boto3
+import random
 from typing import List
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -18,7 +19,8 @@ class Order:
 
 
 # Avoid Lambda cold start 
-client = boto3.client('events')
+eventbridge_client = boto3.client('events')
+orders_table = boto3.resource('dynamodb').Table(os.environ.get('ORDERS_TABLE_NAME', 'orders'))
 bus_name = os.environ.get('EVENT_BUS_NAME', 'fulfillment-dev-event-bus')
 
 # Order Service
@@ -39,11 +41,14 @@ def handler(event, context):
             'customer_id': order.customer_id,
             'items': [{'item_id': item.item_id, 'quantity': item.quantity} for item in order.items],
             'timestamp': datetime.now(timezone.utc).isoformat(),
-            'payment_token': 'mock_token_123456789' # Payment info collected by front end and securely exchanged for token
+            'payment_token': generate_mock_payment_token(), # Payment info collected by front end and securely exchanged for token
+            'status': "placed"
         }
 
+        orders_table.put_item(Item=order_detail)
+
         # publish event to Eventbridge
-        response = client.put_events(
+        response = eventbridge_client.put_events(
             Entries=[
                 {
                     'EventBusName': bus_name,
@@ -76,3 +81,7 @@ def handler(event, context):
         'statusCode': 202,
         'body': json.dumps({'order_id': order_id, 'status': 'processing'})
     }
+
+def generate_mock_payment_token() -> str:
+    random_number = random.randint(100_000_000, 999_999_999)
+    return f"mock_token_{random_number}"
