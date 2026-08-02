@@ -80,7 +80,7 @@ def reserve_inventory(item_id: str, quantity: int) -> bool:
 
     try:
         INVENTORY_TABLE.update_item(
-            Key={"product_id": item_id},
+            Key={"item_id": item_id},
             UpdateExpression="SET quantity_available = quantity_available - :qty",
             ConditionExpression="quantity_available >= :qty",
             ExpressionAttributeValues={":qty": quantity}
@@ -94,7 +94,7 @@ def reserve_inventory(item_id: str, quantity: int) -> bool:
 
 def replenish_inventory(item_id: str, quantity: int) -> bool:
     INVENTORY_TABLE.update_item(
-        Key={"product_id": item_id},
+        Key={"item_id": item_id},
         UpdateExpression="SET quantity_available = quantity_available + :qty",            
         ExpressionAttributeValues={":qty": quantity}
     )

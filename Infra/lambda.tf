@@ -19,6 +19,8 @@ resource "aws_lambda_function" "service" {
         EVENT_BUS_NAME = aws_cloudwatch_event_bus.main.name
         ORDERS_TABLE_NAME = aws_dynamodb_table.dynamodb_tables["orders"].name
         INVENTORY_TABLE_NAME = aws_dynamodb_table.dynamodb_tables["inventory"].name
+        PAYMENTS_TABLE_NAME = aws_dynamodb_table.dynamodb_tables["payments"].name
+        FULFILLMENT_TABLE_NAME = aws_dynamodb_table.dynamodb_tables["fulfillment"].name
       }
     }
 }

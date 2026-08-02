@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import logging
 import boto3
 import random
@@ -22,6 +23,7 @@ logger.setLevel(logging.INFO)
 
 client = boto3.client('events')
 bus_name = os.environ.get('EVENT_BUS_NAME', 'fulfillment-dev-event-bus')
+fulfillment_table = boto3.resource('dynamodb').Table(os.environ.get('FULFILLMENT_TABLE_NAME', 'fulfillment'))
 service_name = 'fulfillment-service'    
 
 # Fulfillment Service
@@ -46,9 +48,21 @@ def handler(event, context):
             'items': [{"item_id": item.item_id, "quantity": item.quantity} for item in orderInfo.items]
         }
 
+        failure_reason = None
         if not fulfilled:
             failure_reason = get_failure_reason()
             fulfillment_detail['failure_reason'] = failure_reason
+
+        fulfillment_record = {
+            "order_id": fulfillment_detail['order_id'],
+            "status": "FAILED" if failure_reason else "FULFILLED",
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+        if failure_reason:
+            fulfillment_record["failure_reason"] = failure_reason
+            
+        fulfillment_table.put_item(Item=fulfillment_record)   
 
         response = client.put_events(
             Entries = [

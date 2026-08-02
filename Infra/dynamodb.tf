@@ -5,7 +5,7 @@ locals {
             type = "S"
         }
         inventory = {
-            partition_key = "product_id"
+            partition_key = "item_id"
             type = "S"
         }
         payments = {

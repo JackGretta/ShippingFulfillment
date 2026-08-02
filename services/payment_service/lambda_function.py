@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import json
 import random
 import logging
@@ -23,6 +24,7 @@ logger.setLevel(logging.INFO)
 
 client = boto3.client('events')
 bus_name = os.environ.get('EVENT_BUS_NAME', 'fulfillment-dev-event-bus')
+payments_table = boto3.resource('dynamodb').Table(os.environ.get('PAYMENTS_TABLE_NAME', 'payments'))
 service_name = 'payment-service'
 
 # Payment Service
@@ -49,9 +51,22 @@ def handler(event, context):
             'payment_token': order.payment_token
         }
 
+        failure_reason = None
         if not payment_status:
             failure_reason = get_failure_reason()
             order_detail['failure_reason'] = failure_reason
+
+        payment_record = {
+            'order_id': order_detail['order_id'],
+            'payment_token': order_detail['payment_token'],
+            'status': 'FAILED' if failure_reason else 'CONFIRMED',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+
+        if failure_reason:
+            payment_record["failure_reason"] = failure_reason
+
+        payments_table.put_item(Item=payment_record)
 
         response = client.put_events(
             Entries = [
