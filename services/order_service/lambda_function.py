@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 import os
 import boto3
@@ -18,10 +19,14 @@ class Order:
     items: List[OrderItem]
 
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 # Avoid Lambda cold start 
 eventbridge_client = boto3.client('events')
 orders_table = boto3.resource('dynamodb').Table(os.environ.get('ORDERS_TABLE_NAME', 'orders'))
 bus_name = os.environ.get('EVENT_BUS_NAME', 'fulfillment-dev-event-bus')
+detail_type = 'OrderPlaced'
 
 # Order Service
 def handler(event, context):    
@@ -53,29 +58,27 @@ def handler(event, context):
                 {
                     'EventBusName': bus_name,
                     'Source': 'order-service',
-                    'DetailType': 'OrderPlaced',                
+                    'DetailType': detail_type,                
                     'Detail': json.dumps(order_detail)
                 }
             ]
         )
 
         if response['FailedEntryCount'] > 0:
+            logger.error("Failed to publish event: %s", response['Entries'])
             return {
                 'statusCode': 500,
                 'body': json.dumps({'error': 'Failed to publish order event'})
             }
 
+        logger.info("Published event detail_type=%s order_id=%s", detail_type, order_detail.get("order_id"))
+
     except KeyError as e:
-        return {
-            "statusCode": 400,
-            'body': json.dumps({'error': f'Missing required field: {e}'})
-        }
+        logger.error(f"Missing required field: {e}")
+        raise
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({'error': 'Internal server error'})
-        }
+        logger.error(f"Unexpected error: {e}")
+        raise
 
     return {
         'statusCode': 202,

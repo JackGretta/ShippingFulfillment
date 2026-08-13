@@ -15,10 +15,10 @@ def handler(event, context):
         # Ideally send email but printing message here as a simulation
         match detail_type: 
             case 'InventoryReservationFailed':
-                item_id = detail['item_id']
-                quantity = detail['quantity']
+                items = detail['items']                
                 reason = detail['reason']
-                logger.info(f"Your order for {quantity} of {item_id} was not able to be fulfilled due to {reason}.")
+                item_desc = ", ".join(f"{i['quantity']} of {i['item_id']}" for i in items)
+                logger.info(f"Your order for {item_desc} was not able to be fulfilled due to {reason}.")
             case 'PaymentFailed':
                 failure_reason = detail['failure_reason']
                 logger.info(f"We failed to finish processing your order due to a payment error: {failure_reason}.")
@@ -37,13 +37,8 @@ def handler(event, context):
         }
     
     except KeyError as e:
-        return {
-            "statusCode": 400,
-            'body': json.dumps({'error': f'Missing required field: {e}'})
-        }
+        logger.error(f"Missing required field: {e}")
+        raise
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({'error': 'Internal server error'})
-        }
+        logger.error(f"Unexpected error: {e}")
+        raise

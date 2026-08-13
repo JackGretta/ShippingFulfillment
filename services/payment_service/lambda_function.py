@@ -80,26 +80,23 @@ def handler(event, context):
         )
 
         if response['FailedEntryCount'] > 0:
-            return {
-                'statusCode': 500,
-                'body': json.dumps({'error': 'Failed to publish payment event'})
-            }
+            logger.error("Failed to publish event: %s", response['Entries'])
+            raise RuntimeError(f"Failed to publish payment event for order_id={order_detail.get('order_id')}")
+
+        logger.info("Published event detail_type=%s order_id=%s",
+                    'PaymentConfirmed' if payment_status else 'PaymentFailed',
+                    order_detail.get('order_id'))
         
         return {
             "statusCode": 200
         }
     
     except KeyError as e:
-        return {
-            "statusCode": 400,
-            'body': json.dumps({'error': f'Missing required field: {e}'})
-        }
+        logger.error(f"Missing required field: {e}")
+        raise
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({'error': 'Internal server error'})
-        }
+        logger.error(f"Unexpected error: {e}")
+        raise
     
 def simulate_payment(order_id: str, payment_token: str) -> bool:
     success = random.randint(0, 10) < 9

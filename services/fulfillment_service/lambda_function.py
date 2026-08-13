@@ -76,26 +76,23 @@ def handler(event, context):
         )
 
         if response['FailedEntryCount'] > 0:
-            return {
-                'statusCode': 500,
-                'body': json.dumps({'error': 'Failed to publish fulfillment event'})
-            }
+            logger.error("Failed to publish event: %s", response['Entries'])
+            raise RuntimeError(f"Failed to publish fulfillment event for order_id={fulfillment_detail.get('order_id')}")
+
+        logger.info("Published event detail_type=%s order_id=%s", 
+                    'OrderShipped' if fulfilled else 'FulfillmentFailed', 
+                    fulfillment_detail.get('order_id'))
         
         return {
             "statusCode": 200
         }
 
     except KeyError as e:
-        return {
-            "statusCode": 400,
-            'body': json.dumps({'error': f'Missing required field: {e}'})
-        }
+        logger.error(f"Missing required field: {e}")
+        raise
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({'error': 'Internal server error'})
-        }
+        logger.error(f"Unexpected error: {e}")
+        raise
 
 def simulate_fulfillment(order_id: str) -> bool:
     success = random.randint(0, 10) < 9

@@ -102,7 +102,7 @@ def replenish_inventory(item_id: str, quantity: int) -> bool:
     return True
 
 def publish_event(detail_type: str, detail: dict) -> None:
-    eventbridge.put_events(
+    response = eventbridge.put_events(
         Entries = [
             {
                 "Source": "inventory-service",
@@ -112,5 +112,9 @@ def publish_event(detail_type: str, detail: dict) -> None:
             }
         ]
     )
+
+    if response['FailedEntryCount'] > 0:
+        logger.error("Failed to publish event: %s", response['Entries'])
+        raise RuntimeError(f"Failed to publish event detail_type={detail_type} order_id={detail.get('order_id')}")
 
     logger.info("Published event detail_type=%s order_id=%s", detail_type, detail.get("order_id"))
