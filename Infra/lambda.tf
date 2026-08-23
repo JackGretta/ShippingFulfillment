@@ -21,12 +21,13 @@ resource "aws_lambda_function" "service" {
     source_code_hash = data.archive_file.service_zip[each.value].output_base64sha256
 
     environment {
-        variables = {
-            EVENT_BUS_NAME = aws_cloudwatch_event_bus.main.name
+        variables = {            
             ORDERS_TABLE_NAME = aws_dynamodb_table.dynamodb_tables["orders"].name
             INVENTORY_TABLE_NAME = aws_dynamodb_table.dynamodb_tables["inventory"].name
+            INVENTORY_IDEMPOTENCY_TABLE_NAME = aws_dynamodb_table.inventory_idempotency_table.name
             PAYMENTS_TABLE_NAME = aws_dynamodb_table.dynamodb_tables["payments"].name
-            FULFILLMENT_TABLE_NAME = aws_dynamodb_table.dynamodb_tables["fulfillment"].name
+            FULFILLMENT_TABLE_NAME = aws_dynamodb_table.dynamodb_tables["fulfillment"].name            
+            OUTBOX_TABLE_NAME = aws_dynamodb_table.dynamodb_outbox_table.name
       }
     }
 }

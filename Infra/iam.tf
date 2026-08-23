@@ -104,3 +104,18 @@ resource "aws_iam_role_policy" "publisher_outbox_update" {
     }]
   })
 }
+
+
+resource "aws_iam_role_policy" "inventory_idempotency_check" {
+  name = "${var.project}-${var.env}-inventory_idempotency-check-policy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["dynamodb:PutItem"]
+      Resource = aws_dynamodb_table.inventory_idempotency_table.arn
+    }]
+  })
+}

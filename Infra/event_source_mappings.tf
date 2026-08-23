@@ -1,4 +1,5 @@
 # When message lands in queue, invoke lambdas
+# Batch_size needs to remain 1 for current lambda setup. A refactor would be needed to batch failures if increased.
 
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
     for_each = toset(["inventory", "payment", "fulfillment", "notification"])
