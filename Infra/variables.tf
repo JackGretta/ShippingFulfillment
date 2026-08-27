@@ -21,3 +21,9 @@ variable "services" {
     type = list(string)
     default = ["order", "inventory", "payment", "fulfillment", "notification"]
 }
+
+variable "sqs_consumer_services" {
+    description = "Services that consume from SQS (excludes order because it is trigged by API Gateway)"
+    type = list(string)
+    default = ["inventory", "payment", "fulfillment", "notification"]
+}

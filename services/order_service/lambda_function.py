@@ -56,8 +56,8 @@ def handler(event, context):
 
         
         transactions = [
-                            build_order_transaction(order_detail), 
-                            build_outbox_order_placed_transaction(order_detail)
+                            build_order_transaction_item(order_detail), 
+                            build_outbox_order_placed_transaction_item(order_detail)
                         ]
 
         try:
@@ -87,7 +87,7 @@ def handler(event, context):
             "body": json.dumps({'error': 'An unexpected error occurred.'})
         } 
 
-def build_order_transaction(order_detail: dict) -> dict:
+def build_order_transaction_item(order_detail: dict) -> dict:
         return {
             "Put": {
                 "TableName": ORDERS_TABLE_NAME,
@@ -102,7 +102,7 @@ def build_order_transaction(order_detail: dict) -> dict:
             }
         }
 
-def build_outbox_order_placed_transaction(order_detail: dict) -> dict:
+def build_outbox_order_placed_transaction_item(order_detail: dict) -> dict:
     return {
         "Put": {
             "TableName": OUTBOX_TABLE_NAME,

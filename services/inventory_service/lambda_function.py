@@ -47,11 +47,11 @@ def handler(event, context):
             reserve_transaction = reserve_inventory(item_id, quantity)
             transact_items.append(reserve_transaction)
 
-        transact_items.append(build_inventory_idempotency_transaction(order_id))
-        transact_items.append(build_outbox_inventory_reserved_transaction(order_id, items, customer_id, payment_token))
+        transact_items.append(build_inventory_idempotency_transaction_item(order_id))
+        transact_items.append(build_outbox_inventory_reserved_transaction_item(order_id, items, customer_id, payment_token))
 
         try:
-            response = dynamodb_client.transact_write_items(TransactItems=transact_items)
+            dynamodb_client.transact_write_items(TransactItems=transact_items)
             return { "statusCode": 200 }
         except ClientError as e:
             if e.response['Error']['Code'] != 'TransactionCanceledException':
@@ -114,7 +114,7 @@ def publish_event(detail_type: str, detail: dict) -> None:
 
     logger.info("Published event detail_type=%s order_id=%s", detail_type, detail.get("order_id"))
 
-def build_inventory_idempotency_transaction(order_id: str) -> dict:
+def build_inventory_idempotency_transaction_item(order_id: str) -> dict:
     """Builds dynamodb transaction item for an order for the inventory_idempotency table"""
     return {
         "Put": {
@@ -127,7 +127,7 @@ def build_inventory_idempotency_transaction(order_id: str) -> dict:
         }
     }
 
-def build_outbox_inventory_reserved_transaction(order_id: str, items: dict, customer_id: str, payment_token: str) -> dict:
+def build_outbox_inventory_reserved_transaction_item(order_id: str, items: dict, customer_id: str, payment_token: str) -> dict:
     """Builds dynamodb transaction item for outbox table"""
     return {
         "Put": {
@@ -141,10 +141,10 @@ def build_outbox_inventory_reserved_transaction(order_id: str, items: dict, cust
                     "customer_id": customer_id,
                     "payment_token": payment_token,
                     "reserved_at": datetime.now(timezone.utc).isoformat()
-                }),
-                "source": serializer.serialize(SERVICE_NAME),
-                "created_at": serializer.serialize(datetime.now(timezone.utc).isoformat()),
-                "published": serializer.serialize(False)
+                    }),
+                    "source": serializer.serialize(SERVICE_NAME),
+                    "created_at": serializer.serialize(datetime.now(timezone.utc).isoformat()),
+                    "published": serializer.serialize(False)
                 }
         }
     }

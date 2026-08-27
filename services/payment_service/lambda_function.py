@@ -3,9 +3,12 @@ import json
 import random
 import logging
 from typing import List
+import uuid
 import boto3
 import os
 from dataclasses import dataclass
+from boto3.dynamodb.types import TypeSerializer
+from botocore.exceptions import ClientError
 
 @dataclass
 class OrderItem:
@@ -22,17 +25,24 @@ class OrderPayload:
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-client = boto3.client('events')
-bus_name = os.environ.get('EVENT_BUS_NAME', 'fulfillment-dev-event-bus')
-payments_table = boto3.resource('dynamodb').Table(os.environ.get('PAYMENTS_TABLE_NAME', 'payments'))
-service_name = 'payment-service'
+PAYMENTS_TABLE_NAME = os.environ.get('PAYMENTS_TABLE_NAME', 'payments')
+OUTBOX_TABLE_NAME = os.environ.get('OUTBOX_TABLE_NAME', 'outbox')
+PAYMENT_CONFIRMED = "PaymentConfirmed"
+PAYMENT_FAILED = "PaymentFailed"
+SERVICE_NAME = 'payment-service'
 
-# Payment Service
-# Emits PaymentConfirmed or PaymentFailed event for Fulfillment
+dynamodb_client = boto3.client('dynamodb')
+serializer = TypeSerializer();
+
+# Emits PaymentConfirmed event for Fulfillment or PaymentFailed for Notification
 def handler(event, context):
     try:            
-        record = event.get('Records', [])
-        body = json.loads(record[0]['body'])
+        records = event.get('Records', [])
+        if not records:
+            logger.error("No records found in event")
+            raise ValueError("Event contained no records")
+        
+        body = json.loads(records[0]['body'])
         detail = body['detail']
 
         order = OrderPayload(
@@ -66,31 +76,26 @@ def handler(event, context):
         if failure_reason:
             payment_record["failure_reason"] = failure_reason
 
-        payments_table.put_item(Item=payment_record)
+        transact_items = []
+        transact_items.append(build_payment_transaction_item(payment_record))
+        transact_items.append(build_outbox_transaction_item(order_detail))
 
-        response = client.put_events(
-            Entries = [
-                {
-                    'EventBusName': bus_name,
-                    'Source': service_name,
-                    'DetailType': 'PaymentConfirmed' if payment_status else 'PaymentFailed',                
-                    'Detail': json.dumps(order_detail)
-                }
-            ]
-        )
+        try:
+            dynamodb_client.transact_write_items(TransactItems=transact_items)
+            return {"statusCode": 200}
+        except ClientError as e:
+            if e.response['Error']['Code'] != 'TransactionCanceledException':
+                raise
 
-        if response['FailedEntryCount'] > 0:
-            logger.error("Failed to publish event: %s", response['Entries'])
-            raise RuntimeError(f"Failed to publish payment event for order_id={order_detail.get('order_id')}")
+            reasons = e.response.get('CancellationReasons', [])
+            payment_reason = reasons[0] # Failure should only happen if trying to deliver existing payment_record
 
-        logger.info("Published event detail_type=%s order_id=%s",
-                    'PaymentConfirmed' if payment_status else 'PaymentFailed',
-                    order_detail.get('order_id'))
-        
-        return {
-            "statusCode": 200
-        }
-    
+            if payment_reason['Code'] == 'ConditionalCheckFailed':
+                logger.info("Duplicate payment delivery detected, order_id=%s", order.order_id)
+                return {"statusCode": 200}
+            else:
+                logger.error("Unexpected transaction failure, order_id=%s, error=%s", order.order_id, e)
+                raise
     except KeyError as e:
         logger.error(f"Missing required field: {e}")
         raise
@@ -112,3 +117,33 @@ def get_failure_reason() -> str:
             return("Insufficient funds")
         case 2:
             return("Vendor error")
+
+def build_payment_transaction_item(payment_record: dict) -> dict:
+    """Builds dynamodb transaction item for the payments table"""
+    return {
+        "Put": {
+            "TableName": PAYMENTS_TABLE_NAME,
+            "Item": serialize_item(payment_record),
+            "ConditionExpression": "attribute_not_exists(order_id)"
+        }
+    }
+
+def build_outbox_transaction_item(order_detail) -> dict:
+    """Builds dynamodb transaction item for the outbox table"""
+    detail_type = PAYMENT_FAILED if order_detail.get("failure_reason", "") else PAYMENT_CONFIRMED
+    return {
+        "Put": {
+            "TableName": OUTBOX_TABLE_NAME,
+            "Item": {
+                "outbox_id": serializer.serialize(str(uuid.uuid4())),
+                "detail_type": serializer.serialize(detail_type),
+                "detail": serializer.serialize(order_detail),
+                "source": serializer.serialize(SERVICE_NAME),
+                "created_at": serializer.serialize(datetime.now(timezone.utc).isoformat()),
+                "published": serializer.serialize(False)
+            }
+        }
+    }
+
+def serialize_item(item: dict) -> dict:
+    return {k: serializer.serialize(v) for k, v in item.items()}

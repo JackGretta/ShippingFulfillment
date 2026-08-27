@@ -4,6 +4,7 @@ import os
 import json
 from datetime import datetime, timedelta, timezone
 from boto3.dynamodb.types import TypeDeserializer
+from decimal import Decimal
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -48,7 +49,7 @@ def publish_event(detail_type: str, detail: dict, source: str, outbox_id: str) -
             {
                 "Source": source,
                 "DetailType": detail_type,
-                "Detail": json.dumps(detail),
+                "Detail": json.dumps(detail, cls=DecimalEncoder),
                 "EventBusName": bus_name
             }
         ]
@@ -68,3 +69,9 @@ def publish_event(detail_type: str, detail: dict, source: str, outbox_id: str) -
             ":ttl_seconds": int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp())
         }
     )
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return int(obj) if obj % 1 == 0 else float(obj)
+        return super().default(obj)    

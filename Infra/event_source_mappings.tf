@@ -2,7 +2,7 @@
 # Batch_size needs to remain 1 for current lambda setup. A refactor would be needed to batch failures if increased.
 
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
-    for_each = toset(["inventory", "payment", "fulfillment", "notification"])
+    for_each = toset(var.sqs_consumer_services)
     event_source_arn = aws_sqs_queue.service_queue[each.value].arn
     function_name = aws_lambda_function.service[each.value].arn
     batch_size = 1
