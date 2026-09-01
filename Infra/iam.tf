@@ -25,6 +25,20 @@ resource "aws_iam_role" "publisher_lambda_exec" {
     })
 }
 
+resource "aws_iam_role_policy" "lambda_eventbridge" {
+  name = "${var.project}-${var.env}-lambda-eventbridge-policy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "events:PutEvents"
+      Resource = aws_cloudwatch_event_bus.main.arn
+    }]
+  })
+}
+
 # Policies to attach to IAM role
 # Existing managed AWS policies
 resource "aws_iam_role_policy_attachment" "lambda_basic" {

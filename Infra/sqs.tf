@@ -4,7 +4,7 @@ resource "aws_sqs_queue" "service_queue" {
     message_retention_seconds = 86400 # one day
     redrive_policy = jsonencode({
       deadLetterTargetArn = aws_sqs_queue.service_dlq[each.value].arn
-      maxReceiveCount     = 3 # Moves to DLQ after 3 failures
+      maxReceiveCount = 3 # Moves to DLQ after 3 failures
   })  
 }
 
@@ -15,11 +15,11 @@ resource "aws_sqs_queue_policy" "allow_eventbridge" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect    = "Allow"
+      Effect = "Allow"
       Principal = { Service = "events.amazonaws.com" }
-      Action    = "sqs:SendMessage"
-      Resource  = aws_sqs_queue.service_queue[each.value].arn
-      #Condition = ...Missing right now to simplify. EventBridge could write to any queue if misconfigured.
+      Action = "sqs:SendMessage"
+      Resource = aws_sqs_queue.service_queue[each.value].arn
+      #Condition = ...Missing right now to simplify. EventBridge could write to any queue if misconfigured. Todo
     }]
   })
 }

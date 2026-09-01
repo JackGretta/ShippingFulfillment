@@ -115,6 +115,13 @@ resource "aws_cloudwatch_event_target" "payment_failed_notification_target" {
   arn = aws_sqs_queue.service_queue["notification"].arn
 }
 
+resource "aws_cloudwatch_event_target" "payment_failed_inventory_target" {
+  rule = aws_cloudwatch_event_rule.payment_failed.name
+  event_bus_name = aws_cloudwatch_event_bus.main.name
+  target_id = "inventory-queue"
+  arn = aws_sqs_queue.service_queue["inventory"].arn
+}
+
 resource "aws_cloudwatch_event_target" "payment_confirmed_fulfillment_target" {
   rule = aws_cloudwatch_event_rule.payment_confirmed.name
   event_bus_name = aws_cloudwatch_event_bus.main.name
