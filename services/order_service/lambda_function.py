@@ -74,12 +74,12 @@ def handler(event, context):
                 "statusCode": 500,
                 "body": json.dumps({'error': 'Failed to place order'})
             }
-    except KeyError as e:
-        logger.error(f"Missing required field: {e}")
+    except (KeyError, TypeError) as e:
+        logger.error(f"Missing or invalid field: {e}")
         return {
             "statusCode": 400,
             "body": json.dumps({'error': 'Failed to place order'})
-        }                
+        }
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         return {

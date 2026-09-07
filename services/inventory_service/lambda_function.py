@@ -41,9 +41,10 @@ def handler(event, context):
 
         transact_items = []
 
+        # track index of idempotency transaction to allow for 
         if detail_type == PAYMENT_FAILED:
             logger.info("Processing inventory restoration for order_id=%s", order_id)
-            idempotency_index = len(transact_items)
+            idempotency_index = 0
             transact_items.append(build_inventory_idempotency_transaction_item(order_id, RESTORED_STATUS))
 
             for item in items:
@@ -98,7 +99,7 @@ def handler(event, context):
                             "failed_at": datetime.now(timezone.utc).isoformat(), 
                         }
                     )
-                    return
+                    return {"statusCode": 200 }
                 else:
                     logger.error("Unexpected transaction cancellation, order_id=%s, reasons=%s", order_id, reasons)
                     raise                
