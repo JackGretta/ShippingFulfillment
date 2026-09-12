@@ -1,6 +1,5 @@
 import os
 import sys
-import importlib.util
 from pathlib import Path
 
 import boto3
@@ -70,26 +69,20 @@ def seed_inventory_idempotency_row(dynamodb_tables):
         )
     return _seed
 
-def _load_lambda_module(service_name: str):
-    module_name = f"{service_name}_lambda_function"
-    sys.modules.pop(module_name, None)
-
-    file_path = REPO_ROOT / "services" / service_name / "lambda_function.py"
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
-
 @pytest.fixture
 def order_lambda(dynamodb_tables):
-    import services.order_service.lambda_function as order_module # Delay execution until pytest calls this fixture, enabling mocking
-    return _load_lambda_module("order_service")
+    import services.order_service.lambda_function as order_module
+    return order_module
 
 @pytest.fixture
 def inventory_lambda(dynamodb_tables):
     import services.inventory_service.lambda_function as inventory_module
     return inventory_module
+
+@pytest.fixture
+def publisher_lambda(dynamodb_tables):
+    import services.publisher_service.lambda_function as publisher_module
+    return publisher_module
 
 @pytest.fixture
 def seed_inventory_item(dynamodb_tables):
