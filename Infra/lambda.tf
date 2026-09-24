@@ -48,13 +48,6 @@ resource "aws_lambda_function" "publisher_service" {
     }
 }
 
-# Individual lambda resource and data for reference
-# data "archive_file" "order_service_zip" {
-#     type = "zip"
-#     source_file = "../services/order_service/lambda_function.py"
-#     output_path = "../services/order_service/lambda_function.zip"
-# }
-
 # resource "aws_lambda_function" "order_service" {
 #     function_name = "${var.project}-${var.env}-service"
 #     role = aws_iam_role.lambda_exec.arn

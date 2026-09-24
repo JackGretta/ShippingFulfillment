@@ -1,3 +1,25 @@
+locals {
+  allowed_queue_rules = {
+    inventory = [
+      aws_cloudwatch_event_rule.order_placed.arn,
+      aws_cloudwatch_event_rule.payment_failed.arn,
+    ]
+    payment = [
+      aws_cloudwatch_event_rule.inventory_reserved.arn,
+    ]
+    fulfillment = [
+      aws_cloudwatch_event_rule.payment_confirmed.arn,
+    ]
+    notification = [
+      aws_cloudwatch_event_rule.inventory_reservation_failed.arn,
+      aws_cloudwatch_event_rule.payment_failed.arn,
+      aws_cloudwatch_event_rule.payment_confirmed.arn,
+      aws_cloudwatch_event_rule.order_shipped.arn,
+      aws_cloudwatch_event_rule.fulfillment_failed.arn,
+    ]
+  }
+}
+
 resource "aws_sqs_queue" "service_queue" {
     for_each = toset(var.sqs_consumer_services)
     name = "${var.project}-${var.env}-${each.value}-queue"
@@ -19,7 +41,7 @@ resource "aws_sqs_queue_policy" "allow_eventbridge" {
       Principal = { Service = "events.amazonaws.com" }
       Action = "sqs:SendMessage"
       Resource = aws_sqs_queue.service_queue[each.value].arn
-      #Condition = ...Missing right now to simplify. EventBridge could write to any queue if misconfigured. Todo
+      Condition = { ArnEquals = { "aws:SourceArn" = local.allowed_queue_rules[each.value] } }
     }]
   })
 }
